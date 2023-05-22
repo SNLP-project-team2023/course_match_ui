@@ -35,7 +35,7 @@
   "header": {
     "icon": "A!",
     "title": "CourseMatch",
-    "infoText": "CourseMatch is a recommender system based on the word embedding technique for course selection. It matches the user's course search with a database of course descriptions available through the Aalto API, and suggest the most relevant courses. It works with English language searches only.",
+    "infoText": "CourseMatch is a recommender system based on the word embedding technique for course selection. It matches the user's course search with a database of course descriptions available through the Aalto API, and suggest the most relevant courses. It works with 50+ languages.",
     "languages": {
       "fi": "fi",
       "en": "en"
@@ -52,6 +52,7 @@
     "courseCodeDescription": "Find similar courses",
     "courseQueryTextPlaceholder": "What would you like to learn today?",
     "matchYourCourses": "Match your courses!",
+    "noResultsWithFilters": "No results with current filters",
     "examplesTitle": "Tell what you would like to learn or try an example"
   }
 }

@@ -1,5 +1,5 @@
 import React, { useRef, useContext, useEffect, useState } from "react";
-import { Pagination, Button, Accordion, AccordionDetails, AccordionSummary, Autocomplete, CircularProgress, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import { Chip, Pagination, Button, Accordion, AccordionDetails, AccordionSummary, Autocomplete, CircularProgress, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import strings from "localization/strings";
 import AppLayout from "components/layouts/app-layout";
 import { SearchMode } from "types";
@@ -24,17 +24,62 @@ const MainScreen: React.FC = () => {
   const [emptyQuery, setEmptyQuery] = useState(true);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [selectedLanguageOptions, setSelectedLanguageOptions] = useState<string[]>([]);
+  const [selectedSemesterOptions, setSelectedSemesterOptions] = useState<string[]>([]);
+  const [queryExampleLanguage, setQueryExampleLanguage] = useState<string>("set1");
 
   const errorContext = useContext(ErrorContext);
   const { matchApi, courseApi } = useApiClient(Api.getApiClient);
 
   const coursesPerPage = 5;
   const courseListRef = useRef<HTMLDivElement>(null);
-  const queryExamples = [
-    "Explain quantum computing in simple terms",
-    "I want to learn how to program a robot",
-    "Introduction to the stock market and trading"
-  ];
+  const queryExamples: { [key: string]: string[] } = {
+    set1: [
+      "Selitä kvanttilaskenta yksinkertaisin sanoin",
+      "I want to learn how to program a robot",
+      "股票市场和交易简介"
+    ],
+    set2: [
+      "Explain quantum computing in simple terms",
+      "我想学习如何编程机器人",
+      "Introduktion till börsen och handel"
+    ],
+    set3: [
+      "Explica la computación cuántica de forma sencilla",
+      "Jag vill lära mig att programmera en robot",
+      "Johdatus pörssiin ja kaupankäyntiin"
+    ],
+    set4: [
+      "Förklara kvantdatorer i enkla termer",
+      "Voglio imparare a programmare un robot",
+      "Introducción al mercado de valores y al comercio"
+    ],
+    set5: [
+      "Introducimi all'informatica quantistica",
+      "Haluan oppia ohjelmoimaan robotin",
+      "Introduction to the stock market and trading"
+    ],
+    set6: [
+      "用简单的术语解释量子计算",
+      "Quiero aprender a programar un robot",
+      "Introduzione al mercato azionario e al trading"
+    ]
+  };
+
+  /**
+   * Rotates query example language
+   */
+  const rotateQueryExampleLanguage = () => {
+    const languages = Object.keys(queryExamples);
+    const currentIndex = languages.indexOf(queryExampleLanguage);
+    const nextIndex = (currentIndex + 1) % languages.length;
+    setQueryExampleLanguage(languages[nextIndex]);
+  };
+
+  useEffect(() => {
+    const intervalId = setInterval(rotateQueryExampleLanguage, 5000);
+    return () => clearInterval(intervalId);
+  }, [queryExampleLanguage]);
 
   /**
    * Fetches course alias
@@ -95,6 +140,7 @@ const MainScreen: React.FC = () => {
     setLoading(true);
     setEmptyQuery(newQueryText === "");
     onCourseTextMatchDebounced(newQueryText);
+    setPage(1);
   };
 
   /**
@@ -218,7 +264,7 @@ const MainScreen: React.FC = () => {
     <Stack direction="column" alignItems="center" spacing={2}>
       <Typography variant="h4" textAlign="center">{strings.mainScreen.examplesTitle}</Typography>
       <Stack direction="row" spacing={2} alignItems="stretch">
-        {queryExamples.map((example: string) => (
+        {queryExamples[queryExampleLanguage].map((example: string) => (
           <Button
             key={example}
             variant="text"
@@ -280,6 +326,40 @@ const MainScreen: React.FC = () => {
   );
 
   /**
+   * Renders language filter
+   */
+  const renderLanguageOption = ({ value }: { value: string }) => (
+    <Chip
+      label={value}
+      color={selectedLanguageOptions.includes(value) ? "primary" : "default"}
+      onClick={() => {
+        if (selectedLanguageOptions.includes(value)) {
+          setSelectedLanguageOptions(selectedLanguageOptions.filter(option => option !== value));
+        } else {
+          setSelectedLanguageOptions([...selectedLanguageOptions, value]);
+        }
+      }}
+    />
+  );
+
+  /**
+   * Renders semester filter
+   */
+  const renderSemesterOption = ({ value }: { value: string }) => (
+    <Chip
+      label={value}
+      color={selectedSemesterOptions.includes(value) ? "primary" : "default"}
+      onClick={() => {
+        if (selectedSemesterOptions.includes(value)) {
+          setSelectedSemesterOptions(selectedSemesterOptions.filter(option => option !== value));
+        } else {
+          setSelectedSemesterOptions([...selectedSemesterOptions, value]);
+        }
+      }}
+    />
+  );
+
+  /**
    * Renders search
    */
   const renderSearch = () => (
@@ -293,6 +373,13 @@ const MainScreen: React.FC = () => {
       >
         {renderSearchMode()}
         {searchMode === SearchMode.CODE ? renderCodeSearch() : renderTextSearch()}
+        <Stack direction="row" spacing={1}>
+          {renderLanguageOption({ value: "en" })}
+          {renderLanguageOption({ value: "fi" })}
+          {renderLanguageOption({ value: "sv" })}
+          {renderSemesterOption({ value: "Autumn" })}
+          {renderSemesterOption({ value: "Spring" })}
+        </Stack>
       </Stack>
     </PaperCard>
   );
@@ -310,14 +397,38 @@ const MainScreen: React.FC = () => {
   );
 
   /**
+   * Renders empty filter results
+   */
+  const renderEmptyFilterResults = () => (
+    <EmptyBox>
+      <Stack alignItems="center" spacing={1} color="rgba(0,0,0,0.6)">
+        <Search fontSize="large"/>
+        <Typography variant="h3">{strings.mainScreen.noResultsWithFilters}</Typography>
+      </Stack>
+    </EmptyBox>
+  );
+
+  /**
    * Renders courses
    */
   const renderCourses = () => {
+    // Add filter to courses
+    const filteredCourses = courses.filter(course => {
+      if (selectedLanguageOptions.length > 0 && !selectedLanguageOptions.includes(course.language)) {
+        return false;
+      }
+      if (selectedSemesterOptions.length > 0 && !selectedSemesterOptions.some(semester => course.period && course.period.includes(semester))) {
+        return false;
+      }
+      return true;
+    });
+    
+    // Slice courses to display only coursesPerPage
     const startIndex = (page - 1) * coursesPerPage;
     const endIndex = startIndex + coursesPerPage;
-    const displayedCourses = courses.slice(startIndex, endIndex);
+    const displayedCourses = filteredCourses.slice(startIndex, endIndex);
   
-    return (
+    return displayedCourses.length <= 0 ? renderEmptyFilterResults() : (
       <Stack spacing={3}>
         <div ref={courseListRef}/>
         {displayedCourses.map(course => (
@@ -330,7 +441,7 @@ const MainScreen: React.FC = () => {
         >
           { courses.length > coursesPerPage &&
             <Pagination
-              count={Math.ceil(courses.length / coursesPerPage)}
+              count={Math.ceil(filteredCourses.length / coursesPerPage)}
               page={page}
               onChange={handlePageChange}
             />
